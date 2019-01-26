@@ -167,4 +167,6 @@ function user_click(c_blok){
     
 }
 
-setup();
+var button = document.createElement("button");
+button.onclick = setup;
+document.body.appendChild(button);
