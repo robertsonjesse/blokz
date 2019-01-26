@@ -1,10 +1,12 @@
-//blokz 2.0
+//board 2.0
 
 //Game loop: user-click1 -> user-click2 -> check swap, swap -> clear -> fall -> re-check (update matrix)
 
 //GLOB:
-var curr_blok, curr_blok_color;
-var board, move_matrix;
+var blok;
+var curr_blok = null, curr_pcolor = null;
+var board = [];
+var move_matrix=[], updf=false; //Update flag for move_matrix
 var p_list = [[[0, 0], [0, 1], [0, 3]], [[0, 2], [1, 0], [1, 1]], [[0, 0], [0, 1], [1, 2]], [[0, 0], [1, 1], [1, 2]], [[0, 0], [0, 2], [0, 3]], [[0, 1], [0, 2], [1, 0]], [[0, 1], [1, 0], [1, 2]], [[0, 0], [0, 2],[1, 1]]];
 var size = 8;
 var score = 0;
@@ -26,58 +28,124 @@ button.style.width = "80px"; button.style.height = "60px";
 button.textContent = "Click me!";
 bod.appendChild(button);
 
-//row, col => destination x and y indices
-function match_check(color, row, col, checkable_copy){
-    //Optimization: There might be one direction we don't have to check
-    //  ->Also, check for redundant patterns
-    var blok1, blok2, blok3;
-    for(patt = 0; patt < 8; patt++){
-        blok1 = checkable_copy[col+patternz[patt][0][1]][row+patternz[patt][0][0]].style.backgroundColor;
-        blok2 = checkable_copy[col+patternz[patt][1][1]][row+patternz[patt][1][0]].style.backgroundColor;
-        blok3 = checkable_copy[col+patternz[patt][2][1]][row+patternz[patt][2][0]].style.backgroundColor;
-        if(blok1 == blok2 && blok1 == blok3 && blok1 != "white" && blok2 != "white" && blok3 != "white"){
-            move_matrix[col+patternz[patt][0][1]][row+patternz[patt][0][0]] = 2;
-        }else{
-            blok1 = checkable_copy[col+patternz[patt][0][0]][row + patternz[patt][0][1]].style.backgroundColor;
-            blok2 = checkable_copy[col+patternz[patt][1][0]][row + patternz[patt][1][1]].style.backgroundColor;
-            blok3 = checkable_copy[col+patternz[patt][2][0]][row + patternz[patt][2][1]].style.backgroundColor;
-            if(blok1 == blok2 && blok1 == blok3 && blok1 != "white" && blok2 != "white" && blok3 != "white"){
+//UTIL:
+//Thanks SE!
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+  
 
-            }
+function check_for_moves(row, col){
+    var blok1, blok2, blok3, mf=false; //mf => move found
+    for(patt = 0; patt < 8; patt++){
+        blok1 = board[col+p_list[patt][0][1]][row+p_list[patt][0][0]];
+        blok2 = board[col+p_list[patt][1][1]][row+p_list[patt][1][0]];
+        blok3 = board[col+p_list[patt][2][1]][row+p_list[patt][2][0]];
+        if(blok1.gc() == blok2.gc() && blok1.gc() == blok3.gc() &&
+         blok1.gc() != "white" && blok2.gc() != "white" && blok3.gc() != "white"){
+            mf = true;
+        }else{
+            blok1 = board[col+p_list[patt][0][0]][row + p_list[patt][0][1]];
+            blok2 = board[col+p_list[patt][1][0]][row + p_list[patt][1][1]];
+            blok3 = board[col+p_list[patt][2][0]][row + p_list[patt][2][1]];
+            mf = (blok1.gc() == blok2.gc() && blok1.gc() == blok3.gc() &&
+             blok1.gc() != "white" && blok2.gc() != "white" && blok3.gc() != "white")
         }
+        if(mf) return true;
     }
+    return false;
 }
 
-//UTIL:
-function swap(b1, b2){
-    var b1_color = b1.style.backgroundColor;
-    //if(b1_color == b2.style.backgroundColor) return false;
+//Checks to see if any >=3 in a row matches occurred
+function match_check(row, col) {
     
-    //Do swap check (check rows and columns), do the symbolic swap, then do pattern check
+    var matches = [];
+    for (r = 1; r <= size-2; r++) {
+        //console.debug(board[col][r-1].gc() + " " + board[col][r].gc() + " " + board[col][r+1].gc());
+        if (board[col][r-1].gc() == board[col][r].gc() && board[col][r].gc() == board[col][r+1].gc()) {
+            matches.push(board[col][r-1]); move_matrix[col][r-1] = board[col][r-1];
+            matches.push(board[col][r]);   move_matrix[col][r] = board[col][r];
+            matches.push(board[col][r+1]); move_matrix[col][r+1] = board[col][r+1];
+        }
+    }
+    for(c=1;c<=size-2;c++){
+        if (board[c-1][row].gc() == board[c][row].gc() && board[c][row].gc() == board[c+1][row].gc()) {
+            matches.push(board[c-1][row]); move_matrix[c-1][row] = board[c-1][row];
+            matches.push(board[c][row]);   move_matrix[c][row] = board[c][row];
+            matches.push(board[c+1][row]); move_matrix[c+1][row] = board[c+1][row];
+        }
+    }
+    if (matches.length != 0) { return matches; }
+    return false;
+}
+
+function do_swap(b1, b2){
+    let c1=b1.gc(),c2=b2.gc();
+    board[b1.gy()][b1.gx()].sc(c2); board[b2.gy()][b2.gx()].sc(c1);
+    //console.debug("swapped " + c1 + " with " + c2 + ".");
+}
+
+//swap(): The function that handles the checks necissary to do blok swapping
+//  and it return either false to indicate that a swap was not performed, or true.
+//b2 -> swap candidate
+function swap(b2){
     
-    //Optimization: Embed indices in HTML
-    var b1_yIndex = (parseInt(b1.style.top.slice(0, -2)) - 40) / xyInc;
-    var b1_xIndex = (parseInt(b1.style.left.slice(0, -2)) - 40) / xyInc;
-    var b2_yIndex = (parseInt(b2.style.top.slice(0, -2)) - 40) / xyInc;
-    var b2_xIndex = (parseInt(b2.style.left.slice(0, -2)) - 40) / xyInc;
+    var b1 = curr_blok; //Too lazy to make the changes
+    //if(curr_pcolor == b2.gc()) return false;
+    var b1_yIndex = b1.gy(), b1_xIndex = b1.gx(), b2_yIndex = b2.gy(), b2_xIndex = b2.gx(); //Indices
+    
+    //Checking by storing bools
     var isSameCol = ((b1_yIndex + 1) == b2_yIndex || b1_yIndex - 1 == b2_yIndex);
     var isSameRow = ((b1_xIndex + 1) == b2_xIndex || b1_xIndex - 1 == b2_xIndex);
     if ((isSameCol || isSameRow) && (b1_yIndex == b2_yIndex || b1_xIndex == b2_xIndex)) {
-        var board_copy = make_checkable_copy(true, b1_xIndex, b1_yIndex, b2_xIndex, b2_yIndex);
-        var mc_return = match_check(b1_color, b1_xIndex, b1_yIndex, board_copy);
-        if(mc_return != []){
-            //Do swap if all checks return true
-            var temp = board[b1_yIndex][b1_xIndex];//Again, let?
-            board[b1_yIndex][b1_xIndex] = board[b2_yIndex][b2_xIndex];
-            board[b2_yIndex][b2_xIndex] = temp;
+        do_swap(b1, b2);
+        var mc_return1 = match_check(b2_xIndex, b2_yIndex), mc_return2 = match_check(b1_xIndex, b1_yIndex);
+        if(mc_return1 != false || mc_return2 != false){
+            //TODO: eliminate duplicates
+            return ((mc_return1 != false && mc_return2!=false)?mc_return1.concat(mc_return2):((mc_return1!=false)?mc_return1:mc_return2));
+        }else{
+            do_swap(b1, b2); //Undo if mc fails
         }
-    } else {
-        return false;
     }
+    return false;
 }
 
-function do_fall(){
+function do_fall(matches){
     //omit animation
+    //Clear move_matrix
+    for(i=0; i<matches.length; i++){
+        matches[i].sc("black");
+    }
+    var temp = true;
+    var newCol; //new color
+    var top = size;
+    var inter = setInterval(goFall, 222);
+    //Animate
+    function goFall() {
+        if (top == 0) {
+            //temp = swapCheck();
+            clearInterval(inter);
+        }
+        for (col = 0; col < top; col++) {
+            for (row = 0; row < size; row++) {
+                if (board[col][row].gc() == "black") {
+                    newCol = "";
+                    if (col == 0) {
+                        //creates new random block and does swap
+                        newCol = colors[Math.floor((Math.random()) * 6)];
+                    } else {
+                        //does swap
+                        newCol = board[col - 1][row].gc();
+                        board[col - 1][row].sc("black");
+                    }
+                    board[col][row].sc(newCol);
+                }
+            }
+        }
+        top -= 1;
+        if(!temp){window.setTimeout(checkGO, 2000);}
+    }
+    console.debug("done.");
 }
 
 //
@@ -87,9 +155,25 @@ function update_move_matrix(){}
 function game_over(){}
 
 //c_blok: clicked "blok"
-function user_click(c_blok){
-    console.debug("user_click");
-    c_blok.style.backgroundColor = "white";
+async function user_click(c_blok){
+    console.debug(c_blok.gx() + " " + c_blok.gy());
+    if(curr_blok != c_blok && curr_blok != null){   //Second click
+        curr_blok.sc(curr_pcolor);
+        let swap_ret = swap(c_blok);
+        if(swap_ret != false){
+            console.debug("match returned! " + swap_ret);
+            await do_fall(swap_ret);
+        }
+        curr_blok.sc(curr_pcolor);
+        curr_blok = null; curr_pcolor = null;
+    }else if(curr_blok == c_blok){
+        curr_blok.sc(curr_pcolor);
+        curr_blok = null; curr_pcolor = null;
+    }else{
+        curr_blok = c_blok;
+        curr_pcolor = c_blok.gc();
+        c_blok.sc("white");   
+    }
 }
 
 function setup(newSize) {
@@ -97,7 +181,7 @@ function setup(newSize) {
     var validXBlok = false; var validYBlok = false;
     var posx = 40; var posy = 40;
     var blokRow = []; var mat_row = [];
-    var color, blok;
+    var color;
     //size = newSize;
     var backSize = 70 + (xyInc * size);
 
@@ -108,6 +192,10 @@ function setup(newSize) {
     blankBlok.style.backgroundColor = "white";
     blankBlok.style.width = xyInc + 'px';
     blankBlok.style.height = xyInc + 'px';
+    blankBlok.gx = function () {return (parseInt(this.style.left.slice(0, -2)) - 40) / xyInc;};
+    blankBlok.gy = function () {return (parseInt(this.style.top.slice(0, -2)) - 40) / xyInc;};
+    blankBlok.gc = function () {return this.style.backgroundColor;};
+    blankBlok.sc = function (c) {this.style.backgroundColor = c;};
     for(inc = 0; inc < size+3; inc++){
         blank_row.push(blankBlok);
     }
@@ -162,7 +250,12 @@ function setup(newSize) {
             blok.style.left = posx + 'px';
             blok.style.top = posy + 'px';
             posx += xyInc;
+            //Set up blok object with getter and setters
             blok.addEventListener("click", function () { user_click(this); });
+            blok.gx = function () {return (parseInt(this.style.left.slice(0, -2)) - 40) / xyInc;};
+            blok.gy = function () {return (parseInt(this.style.top.slice(0, -2)) - 40) / xyInc;};
+            blok.gc = function () {return this.style.backgroundColor;};
+            blok.sc = function (c) {this.style.backgroundColor = c;};
             blokRow.push(blok);
 
             mat_row.push(0); //Matrix
