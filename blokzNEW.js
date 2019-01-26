@@ -102,7 +102,7 @@ function setup(newSize) {
     bod.appendChild(scoreBoard);
 }
 
-//row, col => destination x/y
+//row, col => destination x and y indices
 function match_check(color, row, col, checkable_copy){
     //Optimization: There might be one direction we don't have to check
     //  ->Also, check for redundant patterns
