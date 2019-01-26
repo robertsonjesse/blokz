@@ -98,7 +98,7 @@ function setup(newSize) {
     }
     //Add extra invisible row with no "click"
     board.push(blank_row); board.push(blank_row); board.push(blank_row);
-    
+    //Main append
     bod.appendChild(scoreBoard);
 }
 
