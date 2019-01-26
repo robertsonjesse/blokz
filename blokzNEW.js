@@ -8,99 +8,23 @@ var board, move_matrix;
 var p_list = [[[0, 0], [0, 1], [0, 3]], [[0, 2], [1, 0], [1, 1]], [[0, 0], [0, 1], [1, 2]], [[0, 0], [1, 1], [1, 2]], [[0, 0], [0, 2], [0, 3]], [[0, 1], [0, 2], [1, 0]], [[0, 1], [1, 0], [1, 2]], [[0, 0], [0, 2],[1, 1]]];
 var size = 8;
 var score = 0;
+var xyInc = 40;
 var colors = ["blue", "yellow", "red", "brown", "purple", "green", "hotpink", "lime"];
 
-function setup(newSize) {
-    //Setup function vars
-    var validXBlok = false;
-    var validYBlok = false;
-    var posx = 40;
-    var posy = 40;
-    var blokRow = [];
-    var mat_row = [];
-    var color, blok;
-    size = newSize;
-    var backSize = 70 + (xyInc * size);
+//Setting up DOM elements
+var bod = document.body;
+var back = document.createElement("div");
+var stylBlok = document.createElement("style");
 
-    //Checkability
-    var blank_row = [];
-    var blankBlok = document.createElement("div");
-    blankBlok.hidden = false;
-    blankBlok.style.backgroundColor = "white";
-    blankBlok.style.width = 40 + 'px';
-    blankBlok.style.height = 40 + 'px';
-    for(inc = 0; inc < size+3; inc++){
-        blank_row.push(blankBlok);
-    }
-    
-    //Start the game (DOM elems)
-    setInp.remove();
-    setButt.remove();
-    scoreBoard.innerHTML = "Score: " + score;
-    bod.appendChild(stylBlok);
-    bod.appendChild(stylBack);
-    bod.appendChild(back);
-    back.id = "background";
-    stylBlok.innerHTML = "#blok{width: 30px; height: 30px; position: absolute;}";
-    stylBack.innerHTML = "#background{width: " + backSize + "px; height: " + backSize + "px; position: relative; background-color: black;}";
-    
-    //Setup the board
-    board = [];
-    move_matrix = [];
+//var stylScore = document.createElement("style");
+var stylBack = document.createElement("style");
+var scoreBoard = document.createElement("div"); scoreBoard.id = "score";
 
-    for (col = 0; col < size; col++) {
-        for (row = 0; row < size; row++) {
-            blok = document.createElement("div");
-            while (!validXBlok || !validYBlok) {
-                color = clz[Math.floor((Math.random()) * 8)];
-                if (row >= 2 && !validXBlok) {
-                    if (blokRow[row - 1].style.backgroundColor != color) {
-                        validXBlok = true;
-                    } else if (blokRow[row - 2].style.backgroundColor != color) {
-                        validXBlok = true;
-                    }
-                } else {
-                    validXBlok = true;
-                }
-                if (col >= 2 && !validYBlok) {
-                    if (board[col - 1][row].style.backgroundColor != color) {
-                        validYBlok = true;
-                    } else if (board[col - 2][row].style.backgroundColor != color) {
-                        validYBlok = true;
-                    }
-                } else {
-                    validYBlok = true;
-                }
-            }
-            validXBlok = false;
-            validYBlok = false;
-            back.appendChild(blok);
-            blok.id = "blok";
-            blok.style.backgroundColor = color;
-            blok.style.left = posx + 'px';
-            blok.style.top = posy + 'px';
-            posx += xyInc;
-            blok.addEventListener("click", function () { klik(this); });
-            blokRow.push(blok);
-
-            mat_row.push(0); //Matrix
-        }
-        //Checkable row
-        blokRow.push(blankBlok); blokRow.push(blankBlok); blokRow.push(blankBlok);
-        
-        board.push(blokRow);
-        move_matrix.push(mat_row);
-        blokRow = [];
-        posy += xyInc;
-        posx = 40;
-
-        mat_row = []; //Matrix
-    }
-    //Add extra invisible row with no "click"
-    board.push(blank_row); board.push(blank_row); board.push(blank_row);
-    //Main append
-    bod.appendChild(scoreBoard);
-}
+bod.appendChild(back);
+var button = document.createElement("button");
+button.style.width = "80px"; button.style.height = "60px";
+button.textContent = "Click me!";
+bod.appendChild(button);
 
 //row, col => destination x and y indices
 function match_check(color, row, col, checkable_copy){
@@ -164,9 +88,101 @@ function game_over(){}
 
 //c_blok: clicked "blok"
 function user_click(c_blok){
-    
+    console.debug("user_click");
+    c_blok.style.backgroundColor = "white";
 }
 
-var button = document.createElement("button");
+function setup(newSize) {
+    //Setup function vars
+    var validXBlok = false; var validYBlok = false;
+    var posx = 40; var posy = 40;
+    var blokRow = []; var mat_row = [];
+    var color, blok;
+    //size = newSize;
+    var backSize = 70 + (xyInc * size);
+
+    //Checkability
+    var blank_row = [];
+    var blankBlok = document.createElement("div");
+    blankBlok.hidden = false;
+    blankBlok.style.backgroundColor = "white";
+    blankBlok.style.width = xyInc + 'px';
+    blankBlok.style.height = xyInc + 'px';
+    for(inc = 0; inc < size+3; inc++){
+        blank_row.push(blankBlok);
+    }
+    
+    console.debug("setting DOM...");
+    
+    //Start the game (DOM elems)
+    button.remove();
+    scoreBoard.innerHTML = "Score: " + score;
+    bod.appendChild(stylBlok);
+    bod.appendChild(stylBack);
+    bod.appendChild(back);
+    back.id = "background";
+    stylBlok.innerHTML = "#blok{width: 30px; height: 30px; position: absolute;}";
+    stylBack.innerHTML = "#background{width: " + backSize + "px; height: " + backSize + "px; position: relative; background-color: black;}";
+    
+    //Setup the board
+    board = [];
+    move_matrix = [];
+
+    console.debug("making the board...");
+
+    for (col = 0; col < size; col++) {
+        for (row = 0; row < size; row++) {
+            blok = document.createElement("div");
+            while (!validXBlok || !validYBlok) {
+                color = colors[Math.floor((Math.random()) * 8)];
+                if (row >= 2 && !validXBlok) {
+                    if (blokRow[row - 1].style.backgroundColor != color) {
+                        validXBlok = true;
+                    } else if (blokRow[row - 2].style.backgroundColor != color) {
+                        validXBlok = true;
+                    }
+                } else {
+                    validXBlok = true;
+                }
+                if (col >= 2 && !validYBlok) {
+                    if (board[col - 1][row].style.backgroundColor != color) {
+                        validYBlok = true;
+                    } else if (board[col - 2][row].style.backgroundColor != color) {
+                        validYBlok = true;
+                    }
+                } else {
+                    validYBlok = true;
+                }
+            }
+            validXBlok = false;
+            validYBlok = false;
+            back.appendChild(blok);
+            blok.id = "blok";
+            blok.style.backgroundColor = color;
+            blok.style.left = posx + 'px';
+            blok.style.top = posy + 'px';
+            posx += xyInc;
+            blok.addEventListener("click", function () { user_click(this); });
+            blokRow.push(blok);
+
+            mat_row.push(0); //Matrix
+        }
+        //Checkable row
+        blokRow.push(blankBlok); blokRow.push(blankBlok); blokRow.push(blankBlok);
+        
+        board.push(blokRow);
+        blokRow = [];
+        posy += xyInc;
+        posx = 40;
+
+        move_matrix.push(mat_row); //Matrix
+        mat_row = [];
+    }
+    //Add extra invisible row with no "click"
+    board.push(blank_row); board.push(blank_row); board.push(blank_row);
+
+    bod.appendChild(scoreBoard);
+    console.debug("all done!");
+}
+
 button.onclick = setup;
-document.body.appendChild(button);
