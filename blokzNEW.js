@@ -6,7 +6,7 @@
 var blok;
 var curr_blok = null, curr_pcolor = null;
 var board = [];
-var move_matrix=[], updf=false; //Update flag for move_matrix
+var move_table=[], table_sum=0; //Update flag for move_table
 var p_list = [[[0, 0], [0, 1], [0, 3]], [[0, 2], [1, 0], [1, 1]], [[0, 0], [0, 1], [1, 2]], [[0, 0], [1, 1], [1, 2]], [[0, 0], [0, 2], [0, 3]], [[0, 1], [0, 2], [1, 0]], [[0, 1], [1, 0], [1, 2]], [[0, 0], [0, 2],[1, 1]]];
 var size = 8;
 var score = 0;
@@ -33,7 +33,6 @@ bod.appendChild(button);
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-  
 
 function check_for_moves(row, col){
     var blok1, blok2, blok3, mf=false; //mf => move found
@@ -56,66 +55,17 @@ function check_for_moves(row, col){
     return false;
 }
 
-//Checks to see if any >=3 in a row matches occurred
-function match_check(row, col) {
-    
-    var matches = [];
-    for (r = 1; r <= size-2; r++) {
-        //console.debug(board[col][r-1].gc() + " " + board[col][r].gc() + " " + board[col][r+1].gc());
-        if (board[col][r-1].gc() == board[col][r].gc() && board[col][r].gc() == board[col][r+1].gc()) {
-            matches.push(board[col][r-1]); move_matrix[col][r-1] = board[col][r-1];
-            matches.push(board[col][r]);   move_matrix[col][r] = board[col][r];
-            matches.push(board[col][r+1]); move_matrix[col][r+1] = board[col][r+1];
-        }
-    }
-    for(c=1;c<=size-2;c++){
-        if (board[c-1][row].gc() == board[c][row].gc() && board[c][row].gc() == board[c+1][row].gc()) {
-            matches.push(board[c-1][row]); move_matrix[c-1][row] = board[c-1][row];
-            matches.push(board[c][row]);   move_matrix[c][row] = board[c][row];
-            matches.push(board[c+1][row]); move_matrix[c+1][row] = board[c+1][row];
-        }
-    }
-    if (matches.length != 0) { return matches; }
-    return false;
-}
-
-function do_swap(b1, b2){
-    let c1=b1.gc(),c2=b2.gc();
-    board[b1.gy()][b1.gx()].sc(c2); board[b2.gy()][b2.gx()].sc(c1);
-    //console.debug("swapped " + c1 + " with " + c2 + ".");
-}
-
-//swap(): The function that handles the checks necissary to do blok swapping
-//  and it return either false to indicate that a swap was not performed, or true.
-//b2 -> swap candidate
-function swap(b2){
-    
-    var b1 = curr_blok; //Too lazy to make the changes
-    //if(curr_pcolor == b2.gc()) return false;
-    var b1_yIndex = b1.gy(), b1_xIndex = b1.gx(), b2_yIndex = b2.gy(), b2_xIndex = b2.gx(); //Indices
-    
-    //Checking by storing bools
-    var isSameCol = ((b1_yIndex + 1) == b2_yIndex || b1_yIndex - 1 == b2_yIndex);
-    var isSameRow = ((b1_xIndex + 1) == b2_xIndex || b1_xIndex - 1 == b2_xIndex);
-    if ((isSameCol || isSameRow) && (b1_yIndex == b2_yIndex || b1_xIndex == b2_xIndex)) {
-        do_swap(b1, b2);
-        var mc_return1 = match_check(b2_xIndex, b2_yIndex), mc_return2 = match_check(b1_xIndex, b1_yIndex);
-        if(mc_return1 != false || mc_return2 != false){
-            //TODO: eliminate duplicates
-            return ((mc_return1 != false && mc_return2!=false)?mc_return1.concat(mc_return2):((mc_return1!=false)?mc_return1:mc_return2));
-        }else{
-            do_swap(b1, b2); //Undo if mc fails
-        }
-    }
-    return false;
-}
-
-function do_fall(matches){
+function do_fall(){
     //omit animation
-    //Clear move_matrix
-    for(i=0; i<matches.length; i++){
-        matches[i].sc("black");
-    }
+    //Clear move_table
+    // for(c=0;c<size;c++){
+    //     for(r=0;r<size;r++){
+    //         if(move_table[c][r] == 1){
+    //             board[c][r].sc("black");
+    //         }
+    //     }
+    // }
+    if(table_sum == 0){return;}
     var temp = true;
     var newCol; //new color
     var top = size;
@@ -129,6 +79,11 @@ function do_fall(matches){
         for (col = 0; col < top; col++) {
             for (row = 0; row < size; row++) {
                 if (board[col][row].gc() == "black") {
+                    if(move_table[col][row] == 0){
+                        table_sum += 1;
+                        console.debug(table_sum);
+                        move_table[col][row] = 1;
+                    }
                     newCol = "";
                     if (col == 0) {
                         //creates new random block and does swap
@@ -145,26 +100,99 @@ function do_fall(matches){
         top -= 1;
         if(!temp){window.setTimeout(checkGO, 2000);}
     }
-    console.debug("done.");
+    //console.debug("done.");
+}
+
+//Checks to see if any >=3 in a row matches occurred
+function match_check(row, col) {
+    var mf = false;
+    for (r = 1; r <= size-2; r++) {
+        //console.debug(board[col][r-1].gc() + " " + board[col][r].gc() + " " + board[col][r+1].gc());
+        if (board[col][r-1].gc() == board[col][r].gc() && board[col][r].gc() == board[col][r+1].gc()) {
+            //move_table[col][r-1]=1; 
+            board[col][r-1].sc("black");
+            //move_table[col][r]=1; 
+            board[col][r].sc("black");
+            //move_table[col][r+1]=1;
+            board[col][r+1].sc("black");
+            mf=true;
+        }
+    }
+    for(c=1;c<=size-2;c++){
+        if (board[c-1][row].gc() == board[c][row].gc() && board[c][row].gc() == board[c+1][row].gc()) {
+            //move_table[c-1][row]=1; 
+            board[c-1][row].sc("black");
+            //move_table[c][row]=1; 
+            board[c][row].sc("black");
+            //move_table[c+1][row]=1; 
+            board[c+1][row].sc("black");
+            mf=true;
+        }
+    }
+    return mf;
+}
+
+function do_swap(b1, b2){
+    let c1=b1.gc(),c2=b2.gc();
+    b1.sc(c2); b2.sc(c1);
+    console.debug("swapped " + c1 + " with " + c2 + ".");
+}
+
+//swap(): The function that handles the checks necissary to do blok swapping
+//  and it return either false to indicate that a swap was not performed, or true.
+//b2 -> swap candidate
+function swap(b2){
+    
+    var b1 = curr_blok; //Too lazy to make the changes
+    //if(curr_pcolor == b2.gc()) return false;
+    var b1_yIndex = b1.gy(), b1_xIndex = b1.gx(), b2_yIndex = b2.gy(), b2_xIndex = b2.gx(); //Indices
+    
+    //Checking by storing bools
+    var isSameCol = ((b1_yIndex + 1) == b2_yIndex || b1_yIndex - 1 == b2_yIndex);
+    var isSameRow = ((b1_xIndex + 1) == b2_xIndex || b1_xIndex - 1 == b2_xIndex);
+    if ((isSameCol || isSameRow) && (b1_yIndex == b2_yIndex || b1_xIndex == b2_xIndex)) {
+        var mc_return1 = match_check(b2_xIndex, b2_yIndex), mc_return2 = match_check(b1_xIndex, b1_yIndex);
+        return (mc_return1 || mc_return2);
+    }
+    return false;
 }
 
 //
-function update_move_matrix(){}
+function update_move_table(){
+    var t;
+    for(c=0;c<size;c++){
+        for(r=0;r<size;r++){
+            if(move_table[c][r] == 1){
+                t = match_check(r, c);
+                console.debug(c + " " + r);
+                if(!t){
+                    move_table[c][r]=0; table_sum -= 1;
+                }
+                
+            }
+        }
+    }
+}
 
 //
 function game_over(){}
 
 //c_blok: clicked "blok"
-async function user_click(c_blok){
+function user_click(c_blok){
     console.debug(c_blok.gx() + " " + c_blok.gy());
     if(curr_blok != c_blok && curr_blok != null){   //Second click
         curr_blok.sc(curr_pcolor);
-        let swap_ret = swap(c_blok);
-        if(swap_ret != false){
-            console.debug("match returned! " + swap_ret);
-            await do_fall(swap_ret);
+        do_swap(curr_blok, c_blok);
+        var swap_ret = swap(c_blok);
+        if(swap_ret){
+            do_fall();
+            while(table_sum > 0){
+                update_move_table();
+                do_fall();
+            }
+        }else{
+            do_swap(curr_blok, c_blok)
         }
-        curr_blok.sc(curr_pcolor);
         curr_blok = null; curr_pcolor = null;
     }else if(curr_blok == c_blok){
         curr_blok.sc(curr_pcolor);
@@ -214,7 +242,7 @@ function setup(newSize) {
     
     //Setup the board
     board = [];
-    move_matrix = [];
+    move_table = [];
 
     console.debug("making the board...");
 
@@ -258,7 +286,6 @@ function setup(newSize) {
             blok.sc = function (c) {this.style.backgroundColor = c;};
             blokRow.push(blok);
 
-            mat_row.push(0); //Matrix
         }
         //Checkable row
         blokRow.push(blankBlok); blokRow.push(blankBlok); blokRow.push(blankBlok);
@@ -268,7 +295,7 @@ function setup(newSize) {
         posy += xyInc;
         posx = 40;
 
-        move_matrix.push(mat_row); //Matrix
+        move_table.push([0, 0, 0, 0, 0, 0, 0, 0]); //Matrix
         mat_row = [];
     }
     //Add extra invisible row with no "click"
